@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
 import { MobileShell } from '@/components/layout/MobileShell';
@@ -14,6 +14,14 @@ const noto = Noto_Sans_KR({
 export const metadata: Metadata = {
   title: '콩팟 - 심은대로 거둔다',
   description: '경험을 커리어 자산으로',
+};
+
+// 모바일(iOS Safari)에서 16px 미만 입력창 포커스 시 자동 확대 방지
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

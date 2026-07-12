@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { ScreenHeader } from '@/components/ui/BackButton';
-import { Button } from '@/components/ui/Button';
 import { RecordDetailCard } from '@/components/record/RecordDetailCard';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,8 +18,6 @@ function DetailContent() {
   const { getToken } = useAuth();
   useRequireAuth();
   const [record, setRecord] = useState<Record | null>(null);
-  const [retryLoading, setRetryLoading] = useState(false);
-  const [retryError, setRetryError] = useState('');
 
   const loadRecord = useCallback(async () => {
     const token = getToken();
@@ -36,21 +33,6 @@ function DetailContent() {
   useEffect(() => {
     loadRecord();
   }, [loadRecord]);
-
-  async function handleRetryAnalysis() {
-    const token = getToken();
-    if (!token || !id) return;
-    setRetryLoading(true);
-    setRetryError('');
-    try {
-      const updated = await api.retryAnalysis(token, id);
-      setRecord(updated);
-    } catch (e) {
-      setRetryError(e instanceof Error ? e.message : '분석 재시도에 실패했습니다.');
-    } finally {
-      setRetryLoading(false);
-    }
-  }
 
   if (!record) {
     return (
@@ -76,20 +58,6 @@ function DetailContent() {
 
       <div className="flex-1 overflow-y-auto px-3.5 py-4">
         <RecordDetailCard record={record} />
-
-        {record.status === 'SAVED_UNANALYZED' && (
-          <div className="mt-4">
-            {retryError && <p className="mb-2 text-center text-[14px] text-primary">{retryError}</p>}
-            <Button
-              fullWidth
-              className="h-12"
-              loading={retryLoading}
-              onClick={handleRetryAnalysis}
-            >
-              분석 다시 시도
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -23,7 +23,12 @@ export function RecordDetailCard({ record, className }: RecordDetailCardProps) {
           AI 분석 완료
         </p>
       ) : record.status === 'SAVED_UNANALYZED' ? (
-        <p className="mb-4 text-center text-[14px] font-bold text-olive">분석 미완료</p>
+        <div className="mb-4 text-center">
+          <p className="text-[14px] font-bold text-olive">분석 미완료</p>
+          <p className="mt-1 text-[12px] text-[#acacac]">
+            적절한 역량 태그를 찾을 수 없었어요.
+          </p>
+        </div>
       ) : null}
 
       <div className="mb-4 flex items-start justify-between gap-2">

@@ -99,7 +99,4 @@ export const api = {
 
   acceptPolicy: (token: string) =>
     request('/profiles/accept-policy', { method: 'POST', token }),
-
-  retryAnalysis: (token: string, id: string) =>
-    request<Record>(`/analysis/record/${id}/retry`, { method: 'POST', token }),
 };
