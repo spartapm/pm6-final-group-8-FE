@@ -11,6 +11,9 @@ import { figmaAssets } from '@/lib/figma-assets';
 import { getDevSession, isDevAuth } from '@/lib/supabase/client';
 import { AnalyticsEvent, capture } from '@/lib/analytics';
 
+// UT 기간 동안 소셜 로그인 임시 비활성화 (로직은 유지, UT 종료 후 false로 되돌리면 복구)
+const UT_SOCIAL_LOGIN_DISABLED = true;
+
 export default function LoginPage() {
   const router = useRouter();
   const { signIn, signInOAuth } = useAuth();
@@ -18,8 +21,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState('');
   const devMode = isDevAuth();
   const canSubmit = devMode || (email.trim().length > 0 && password.length > 0);
+
+  function showToast(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(''), 2000);
+  }
+
+  function handleSocialClick(provider: 'kakao' | 'google') {
+    if (UT_SOCIAL_LOGIN_DISABLED) {
+      showToast('준비 중입니다.');
+      return;
+    }
+    handleOAuth(provider);
+  }
 
   async function redirectAfterAuth(token: string | null) {
     if (!token) return;
@@ -121,8 +138,7 @@ export default function LoginPage() {
           variant="kakao"
           fullWidth
           className="h-12 text-[15px]"
-          disabled={loading}
-          onClick={() => handleOAuth('kakao')}
+          onClick={() => handleSocialClick('kakao')}
         >
           카카오로 계속하기
         </Button>
@@ -130,12 +146,19 @@ export default function LoginPage() {
           variant="google"
           fullWidth
           className="h-12 text-[15px]"
-          disabled={loading}
-          onClick={() => handleOAuth('google')}
+          onClick={() => handleSocialClick('google')}
         >
           Google로 계속하기
         </Button>
       </div>
+
+      {toast && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-10 z-50 flex justify-center px-6">
+          <div className="rounded-full bg-neutral-900/90 px-4 py-2 text-[14px] text-white shadow-lg">
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
