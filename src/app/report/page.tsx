@@ -15,6 +15,7 @@ import { ErrorModal } from '@/components/ui/ErrorModal';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api-client';
+import { AnalyticsEvent, capture } from '@/lib/analytics';
 import { COMPETENCY_CATEGORIES, CATEGORY_LABELS } from '@/lib/constants/categories';
 import type { ReportSummary, Insight } from '@/types';
 import { cn } from '@/lib/utils';
@@ -118,6 +119,11 @@ export default function ReportPage() {
     setError(null);
     try {
       const { from, to } = dateRange;
+      capture(AnalyticsEvent.InsightRequested, {
+        from,
+        to,
+        totalRecords: summary.totalRecords,
+      });
       const result = (await api.generateInsights(token, from, to)) as {
         periodDays: number;
         insights: Insight[];

@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getPostAuthPath } from '@/lib/auth-utils';
 import { figmaAssets } from '@/lib/figma-assets';
 import { getDevSession, isDevAuth } from '@/lib/supabase/client';
+import { AnalyticsEvent, capture } from '@/lib/analytics';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const token = await signIn(email, password);
+      if (token) capture(AnalyticsEvent.UserLoggedIn, { method: 'password' });
       await redirectAfterAuth(token);
     } catch (e) {
       setError(e instanceof Error ? e.message : '로그인에 실패했습니다.');
@@ -43,6 +45,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signInOAuth(provider);
+      capture(AnalyticsEvent.UserLoggedIn, { method: provider });
       if (isDevAuth()) {
         const session = getDevSession();
         if (session) {

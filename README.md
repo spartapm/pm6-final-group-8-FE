@@ -30,4 +30,15 @@ Supabase 미설정 시 **개발 모드**로 동작합니다 (로컬 세션 + moc
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_API_URL=http://localhost:4000
+
+# PostHog (US Cloud) — 키 미설정 시 트래킹 비활성(no-op)
+NEXT_PUBLIC_POSTHOG_KEY=
+NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
+
+## 분석 (PostHog)
+
+- 로그인 시 유저 계정(`user.id`) 기준으로 `identify`, 로그아웃 시 `reset`.
+- autocapture(클릭/입력 등 UI 이벤트) + SPA 수동 pageview 캡처.
+- 커스텀 이벤트: `user_logged_in`, `record_created`, `insight_requested`.
+- 키/호스트는 `.env.local`(로컬)과 Vercel 환경변수에만 저장.

@@ -13,6 +13,7 @@ import { useRecordDraft } from '@/hooks/useRecordDraft';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api-client';
+import { AnalyticsEvent, capture } from '@/lib/analytics';
 import type { Record } from '@/types';
 
 type Phase = 'q1' | 'q2' | 'q3' | 'extra_ask' | 'extra_input' | 'save';
@@ -128,6 +129,11 @@ export default function ChatPage() {
           sortOrder: m.sortOrder ?? i,
         })),
       })) as Record;
+      capture(AnalyticsEvent.RecordCreated, {
+        category,
+        emotionLevel,
+        status: record.status,
+      });
       router.push(`/record/complete?id=${record.id}`);
     } catch (e) {
       setError(e instanceof Error ? e : new Error('저장 실패'));

@@ -3,6 +3,7 @@ import { Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
 import { MobileShell } from '@/components/layout/MobileShell';
 import { NetworkProvider } from '@/components/layout/NetworkProvider';
+import { PostHogProvider } from '@/components/analytics/PostHogProvider';
 import { AuthProvider } from '@/hooks/useAuth';
 
 const noto = Noto_Sans_KR({
@@ -29,9 +30,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko" className={`${noto.variable} h-full antialiased`}>
       <body className="min-h-dvh">
         <AuthProvider>
-          <NetworkProvider>
-            <MobileShell>{children}</MobileShell>
-          </NetworkProvider>
+          <PostHogProvider>
+            <NetworkProvider>
+              <MobileShell>{children}</MobileShell>
+            </NetworkProvider>
+          </PostHogProvider>
         </AuthProvider>
       </body>
     </html>
