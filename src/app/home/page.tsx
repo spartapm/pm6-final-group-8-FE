@@ -20,7 +20,6 @@ import {
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { GNB } from '@/components/layout/GNB';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
@@ -281,26 +280,30 @@ export default function HomePage() {
                     key={record.id}
                     type="button"
                     onClick={() => router.push(`/records/${record.id}?from=home`)}
-                    className="relative w-full rounded-[14px] bg-[#f1f1f1] p-3.5 text-left"
+                    className="w-full rounded-[14px] bg-[#f1f1f1] px-3.5 py-3.5 text-left"
                   >
-                    <div className="mb-2 flex flex-wrap items-start gap-1.5 pr-16">
-                      {record.tags && record.tags.length > 0
-                        ? record.tags.slice(0, 2).map((t) => (
-                            <Badge key={t.id} variant="tag">#{t.tag.name}</Badge>
-                          ))
-                        : null}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-h-[15px] flex-wrap gap-x-2 gap-y-1">
+                        {record.tags && record.tags.length > 0
+                          ? record.tags.slice(0, 2).map((t) => (
+                              <span
+                                key={t.id}
+                                className="text-[11px] font-bold leading-[15px] text-primary"
+                              >
+                                #{t.tag.name}
+                              </span>
+                            ))
+                          : null}
+                      </div>
+                      <span className="shrink-0 text-[12px] font-medium leading-[15px] text-olive">
+                        {record.record_date}
+                      </span>
                     </div>
-                    <Badge
-                      variant={record.status === 'SAVED_ANALYZED' ? 'success' : 'warning'}
-                      className="absolute right-3.5 top-3.5"
-                    >
-                      {record.status === 'SAVED_ANALYZED' ? '분석 완료' : '분석 미완료'}
-                    </Badge>
-                    <p className="text-[16px] font-black text-foreground">
-                      {CATEGORY_LABELS[record.category]}
+                    <p className="mt-2 text-[16px] font-black leading-[22px] text-foreground">
+                      {CATEGORY_LABELS[record.category] ?? record.category}
                     </p>
-                    <p className="mt-1 line-clamp-2 text-[14px] leading-[21px] text-[#5e574a]">
-                      {record.summary ? `"${record.summary}"` : '기록이 저장되었습니다.'}
+                    <p className="mt-1.5 line-clamp-2 text-[14px] font-medium leading-[21px] text-[#5e574a]">
+                      {record.summary ? `"${record.summary}"` : '"기록이 저장되었습니다."'}
                     </p>
                   </button>
                 ))}

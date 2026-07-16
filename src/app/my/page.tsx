@@ -55,7 +55,7 @@ export default function MyPage() {
           alt=""
           width={47}
           height={47}
-          className="absolute left-[18px] top-[18px] h-[47px] w-[47px] rounded-full object-cover"
+          className="absolute left-[18px] top-[18px] h-[47px] w-[47px] object-contain"
         />
         <p className="absolute left-[72px] top-1/2 w-[228px] -translate-y-1/2 text-[11px] font-bold leading-[16px] text-white">
           <span className="block whitespace-nowrap">작은 기록도 모이면 분명한 변화가 돼요.</span>
@@ -150,6 +150,17 @@ export default function MyPage() {
 
         <button
           type="button"
+          onClick={() => router.push('/my/competencies')}
+          className="flex w-full items-center justify-between py-3"
+        >
+          <span className="text-[12.5px] font-bold text-foreground">역량 태그 모음집</span>
+          <span className="text-[24px] leading-none text-olive">›</span>
+        </button>
+
+        <div className="my-1 h-px bg-[#f1f1f1]" />
+
+        <button
+          type="button"
           onClick={() => setLogoutOpen(true)}
           className="py-3 text-left text-[12.5px] font-bold text-[#ed6e6e]"
         >
@@ -167,7 +178,16 @@ export default function MyPage() {
         onConfirm={handleLogout}
         onCancel={() => setLogoutOpen(false)}
       >
-        정말 로그아웃 하시겠어요?
+        <div className="flex flex-col items-center gap-3">
+          <FigmaImage
+            src={figmaAssets.logo}
+            alt=""
+            width={48}
+            height={48}
+            className="h-12 w-12 object-contain"
+          />
+          <p>정말 로그아웃 하시겠어요?</p>
+        </div>
       </Modal>
     </div>
   );

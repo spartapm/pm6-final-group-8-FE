@@ -18,8 +18,8 @@ export function CategoryIcon({ src, selected = false, className }: CategoryIconP
       width={30}
       height={30}
       className={cn(
-        'h-[30px] w-[30px] object-contain',
-        selected ? 'brightness-0 invert' : '',
+        'h-[30px] w-[30px] shrink-0 object-contain',
+        selected && 'brightness-0 invert',
         className,
       )}
     />

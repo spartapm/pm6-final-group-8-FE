@@ -1,12 +1,13 @@
 import { figmaAssets } from '@/lib/figma-assets';
 
 export const EXPERIENCE_CATEGORIES = [
-  { id: 'job_prep', label: '취업 준비', icon: figmaAssets.catJob },
-  { id: 'study', label: '자격증/직무 학습', icon: figmaAssets.catStudy },
-  { id: 'project', label: '프로젝트/과제', icon: figmaAssets.catProject },
-  { id: 'work', label: '아르바이트/근무', icon: figmaAssets.catWork },
-  { id: 'activity', label: '대외활동/동아리', icon: figmaAssets.catActivity },
-  { id: 'daily', label: '일상 속 경험', icon: figmaAssets.catDaily },
+  { id: 'work', label: '근무·아르바이트', icon: figmaAssets.catWork },
+  { id: 'resume', label: '자소서·이력서', icon: figmaAssets.catResume },
+  { id: 'interview', label: '면접·채용 준비', icon: figmaAssets.catInterview },
+  { id: 'study', label: '학습·자격증', icon: figmaAssets.catStudy },
+  { id: 'project', label: '프로젝트·과제', icon: figmaAssets.catProject },
+  { id: 'activity', label: '대외활동·동아리', icon: figmaAssets.catActivity },
+  { id: 'other', label: '기타', icon: figmaAssets.catOther },
 ] as const;
 
 export type ExperienceCategoryId = (typeof EXPERIENCE_CATEGORIES)[number]['id'];
@@ -40,13 +41,25 @@ export function getEmotionImage(level: number) {
   return EMOTION_IMAGES[index];
 }
 
-export function isNegativeEmotion(level: number) {
-  return level <= 3;
+/** 1–2 나쁨, 3 중립, 4–5 좋음 */
+export type EmotionBucket = 'negative' | 'neutral' | 'positive';
+
+export function getEmotionBucket(level: number): EmotionBucket {
+  if (level <= 2) return 'negative';
+  if (level === 3) return 'neutral';
+  return 'positive';
 }
 
-export const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-  EXPERIENCE_CATEGORIES.map((c) => [c.id, c.label]),
-);
+export function isNegativeEmotion(level: number) {
+  return level <= 2;
+}
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  ...Object.fromEntries(EXPERIENCE_CATEGORIES.map((c) => [c.id, c.label])),
+  // legacy ids (마이그레이션 전 기록 표시용)
+  job_prep: '자소서·이력서',
+  daily: '기타',
+};
 
 export const COMPETENCY_CATEGORIES = [
   { id: 'problem_solving', label: '문제해결' },

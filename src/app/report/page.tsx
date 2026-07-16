@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { subDays, format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { GNB } from '@/components/layout/GNB';
 import { MobileOverlay } from '@/components/layout/MobileOverlay';
 import { ScreenHeader } from '@/components/ui/BackButton';
@@ -64,7 +63,18 @@ export default function ReportPage() {
   const [detailCategory, setDetailCategory] = useState<string | null>(null);
   const [detailLabel, setDetailLabel] = useState('');
   const [detailRecords, setDetailRecords] = useState<
-    Array<{ id: string; summary: string; record_date: string; category: string }>
+    Array<{
+      id: string;
+      summary: string | null;
+      record_date: string;
+      created_at?: string;
+      category: string;
+      status?: string;
+      tags?: Array<{
+        evidenceText?: string;
+        tag: { name: string; code?: string; category?: string } | null;
+      }>;
+    }>
   >([]);
 
   const dateRange = useMemo(() => {
@@ -114,7 +124,8 @@ export default function ReportPage() {
 
   async function handleInsight() {
     const token = getToken();
-    if (!token || !summary || summary.totalRecords === 0) return;
+    const tagTotal = summary?.radar.reduce((sum, r) => sum + r.count, 0) ?? 0;
+    if (!token || !summary || tagTotal === 0) return;
     setInsightLoading(true);
     setError(null);
     try {
@@ -144,18 +155,31 @@ export default function ReportPage() {
     const { from, to } = dateRange;
     const records = (await api.getCompetencyRecords(token, category, from, to)) as Array<{
       id: string;
-      summary: string;
+      summary: string | null;
       record_date: string;
+      created_at?: string;
       category: string;
+      status?: string;
+      tags?: Array<{
+        evidenceText?: string;
+        tag: { name: string; code?: string; category?: string } | null;
+      }>;
     }>;
+    // 최신 날짜 순 → 같은 날짜면 최신 등록 순
+    const sorted = [...records].sort((a, b) => {
+      const byDate = b.record_date.localeCompare(a.record_date);
+      if (byDate !== 0) return byDate;
+      return (b.created_at ?? '').localeCompare(a.created_at ?? '');
+    });
     setDetailCategory(category);
     setDetailLabel(label);
-    setDetailRecords(records);
+    setDetailRecords(sorted);
   }
 
   if (authLoading) return null;
 
-  const canInsight = (summary?.totalRecords ?? 0) > 0;
+  const canInsight =
+    (summary?.radar.reduce((sum, r) => sum + r.count, 0) ?? 0) > 0;
 
   return (
     <div className="flex min-h-dvh flex-col bg-white pb-[116px]">
@@ -295,25 +319,53 @@ export default function ReportPage() {
               </p>
             ) : (
               <div className="mt-6 space-y-3">
-                {detailRecords.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    className="relative w-full rounded-[14px] bg-[#f1f1f1] p-4 text-left"
-                    onClick={() => router.push(`/records/${r.id}?from=report`)}
-                  >
-                    <Badge variant="success" className="absolute right-3.5 top-3.5">
-                      분석 완료
-                    </Badge>
-                    <p className="pr-16 text-[15px] font-black text-foreground">
-                      {CATEGORY_LABELS[r.category] ?? r.category}
-                    </p>
-                    <p className="mt-1 text-[11px] text-olive">{r.record_date}</p>
-                    <p className="mt-2 line-clamp-3 text-[14px] leading-[21px] text-[#5e574a]">
-                      {r.summary ? `"${r.summary}"` : '기록'}
-                    </p>
-                  </button>
-                ))}
+                {detailRecords.map((r) => {
+                  // 현재 보고 있는 역량 대분류 태그를 우선, 기록당 최대 2개
+                  const matched = (r.tags ?? []).filter(
+                    (t) => t.tag?.name && (!detailCategory || t.tag.category === detailCategory),
+                  );
+                  const fallback = (r.tags ?? []).filter((t) => t.tag?.name);
+                  const tagNames = (matched.length > 0 ? matched : fallback)
+                    .map((t) => t.tag!.name)
+                    .slice(0, 2);
+
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className="w-full rounded-[14px] bg-[#f1f1f1] px-3.5 py-3.5 text-left"
+                      onClick={() => router.push(`/records/${r.id}?from=report`)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-h-[15px] flex-wrap gap-x-2 gap-y-1">
+                          {tagNames.map((name) => (
+                            <span
+                              key={name}
+                              className="text-[11px] font-bold leading-[15px] text-primary"
+                            >
+                              #{name}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="shrink-0 text-[12px] font-medium leading-[15px] text-primary">
+                          분석 완료
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-[16px] font-black leading-[22px] text-foreground">
+                        {CATEGORY_LABELS[r.category] ?? r.category}
+                      </p>
+                      <p className="mt-1 text-[12px] font-medium leading-[15px] text-olive">
+                        {r.record_date}
+                      </p>
+                      <p className="mt-2 whitespace-pre-wrap text-[14px] font-medium leading-[21px] text-[#5e574a]">
+                        {r.summary?.trim()
+                          ? `“${r.summary.trim()}”`
+                          : '“기록이 저장되었습니다.”'}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

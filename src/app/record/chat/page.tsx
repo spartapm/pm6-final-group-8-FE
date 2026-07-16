@@ -6,9 +6,19 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorModal } from '@/components/ui/ErrorModal';
 import { BackButton } from '@/components/ui/BackButton';
-import { ChatBubble, TypingBubble, ChatInputBar, ExtraQuestionBubble } from '@/components/record/ChatBubble';
+import { ChatBubble, ChatInputBar, ExtraQuestionBubble } from '@/components/record/ChatBubble';
 import { CATEGORY_LABELS } from '@/lib/constants/categories';
-import { getQuestions, getQuestionHints, EXTRA_QUESTION, EXTRA_QUESTION_HINT, EMPTY_SAVE_MESSAGE, EMPTY_SAVE_SUBMESSAGE } from '@/lib/constants/questions';
+import {
+  getQuestions,
+  getQuestionHints,
+  getRandomGreeting,
+  INTRO_FIXED,
+  EXTRA_QUESTION,
+  EXTRA_INPUT_PROMPT,
+  EXTRA_MORE_LABEL,
+  EMPTY_SAVE_MESSAGE,
+  EMPTY_SAVE_SUBMESSAGE,
+} from '@/lib/constants/questions';
 import { useRecordDraft } from '@/hooks/useRecordDraft';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +27,8 @@ import { AnalyticsEvent, capture } from '@/lib/analytics';
 import type { Record } from '@/types';
 
 type Phase = 'q1' | 'q2' | 'q3' | 'extra_ask' | 'extra_input' | 'save';
+
+const BOT_DELAY_MS = 1000;
 
 export default function ChatPage() {
   const router = useRouter();
@@ -30,9 +42,10 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [emptyConfirm, setEmptyConfirm] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const latestBotRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef(0);
-  const questionIndexRef = useRef(0);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didInitRef = useRef(false);
 
@@ -44,8 +57,24 @@ export default function ChatPage() {
   }, [category, router]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [displayed, typing]);
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardOffset(offset);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
+
+  useEffect(() => {
+    latestBotRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [displayed, typing, keyboardOffset]);
 
   function showBotMessage(text: string, hint?: string, onDone?: () => void) {
     if (typingTimeoutRef.current) {
@@ -57,16 +86,28 @@ export default function ChatPage() {
       setTyping(false);
       setDisplayed((d) => [...d, { role: 'bot', content: text, hint }]);
       onDone?.();
-    }, 800);
+    }, BOT_DELAY_MS);
   }
 
   useEffect(() => {
     if (!category || didInitRef.current) return;
     didInitRef.current = true;
 
+    const greeting = getRandomGreeting(emotionLevel);
     const [q1] = getQuestions(category, emotionLevel);
     const [h1] = getQuestionHints(category, emotionLevel);
-    showBotMessage(q1, h1);
+
+    // 인트로: 인사말 + 빈 줄 + 안내문 (같은 말풍선·동일 스타일) → Q1
+    const introBubble = `${greeting}\n\n${INTRO_FIXED}`;
+    setDisplayed([{ role: 'bot', content: introBubble }]);
+    addMessage({
+      role: 'bot',
+      content: introBubble,
+      sortOrder: sortRef.current++,
+    });
+    showBotMessage(q1, h1, () => {
+      addMessage({ role: 'bot', content: q1, sortOrder: sortRef.current++ });
+    });
 
     return () => {
       didInitRef.current = false;
@@ -86,16 +127,14 @@ export default function ChatPage() {
     setInput('');
 
     if (phase === 'q1') {
-      questionIndexRef.current = 1;
       addMessage({ role: 'bot', content: questions[1], sortOrder: sortRef.current++ });
       showBotMessage(questions[1], questionHints[1], () => setPhase('q2'));
     } else if (phase === 'q2') {
-      questionIndexRef.current = 2;
       addMessage({ role: 'bot', content: questions[2], sortOrder: sortRef.current++ });
       showBotMessage(questions[2], questionHints[2], () => setPhase('q3'));
     } else if (phase === 'q3') {
       addMessage({ role: 'bot', content: EXTRA_QUESTION, sortOrder: sortRef.current++ });
-      showBotMessage(EXTRA_QUESTION, EXTRA_QUESTION_HINT, () => setPhase('extra_ask'));
+      showBotMessage(EXTRA_QUESTION, undefined, () => setPhase('extra_ask'));
     } else if (phase === 'extra_input') {
       setPhase('save');
     }
@@ -105,9 +144,8 @@ export default function ChatPage() {
     const token = getToken();
     if (!token || !category) return;
 
-    const allMessages = [
+    const allMessages = messages.length > 0 ? messages : [
       { role: 'bot' as const, content: questions[0], sortOrder: 0 },
-      ...messages,
     ];
 
     const hasUserText = allMessages.some((m) => m.role === 'user' && m.content.trim());
@@ -134,7 +172,8 @@ export default function ChatPage() {
         emotionLevel,
         status: record.status,
       });
-      router.push(`/record/complete?id=${record.id}`);
+      // reset은 완료 화면에서 수행 — 여기서 reset하면 category=null → /record/category로 튕김
+      router.replace(`/record/complete?id=${record.id}`);
     } catch (e) {
       setError(e instanceof Error ? e : new Error('저장 실패'));
     } finally {
@@ -146,9 +185,10 @@ export default function ChatPage() {
 
   const showInput = ['q1', 'q2', 'q3', 'extra_input'].includes(phase);
   const showSave = phase === 'save';
+  const bottomPad = Math.max(keyboardOffset, 0);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
+    <div className="flex min-h-dvh flex-col bg-white" style={{ paddingBottom: bottomPad }}>
       <header className="border-b border-[#e8e3d6] bg-white px-3.5 pb-2 pt-2">
         <div className="flex items-center">
           <BackButton
@@ -171,45 +211,64 @@ export default function ChatPage() {
 
       <div className="flex-1 space-y-4 overflow-y-auto px-3.5 py-2 pb-44">
         {displayed.map((msg, i) => {
+          const isLast = i === displayed.length - 1;
           const isExtraQuestion =
             phase === 'extra_ask' &&
-            i === displayed.length - 1 &&
+            isLast &&
             msg.role === 'bot' &&
             msg.content === EXTRA_QUESTION;
 
           if (isExtraQuestion) {
             return (
-              <ExtraQuestionBubble
-                key={i}
-                content={msg.content}
-                hint={msg.hint}
-                onSkip={() => {
-                  setDisplayed((d) => [...d, { role: 'user', content: '아니 할말 다 했어' }]);
-                  setPhase('save');
-                }}
-                onMore={() => {
-                  setDisplayed((d) => [...d, { role: 'user', content: '응 더 이야기 할래' }]);
-                  setPhase('extra_input');
-                }}
-              />
+              <div key={i} ref={isLast ? latestBotRef : undefined}>
+                <ExtraQuestionBubble
+                  content={msg.content}
+                  hint={msg.hint}
+                  onSkip={() => {
+                    setPhase('save');
+                  }}
+                  onMore={() => {
+                    setDisplayed((d) => [
+                      ...d,
+                      { role: 'user', content: EXTRA_MORE_LABEL },
+                    ]);
+                    addMessage({
+                      role: 'user',
+                      content: EXTRA_MORE_LABEL,
+                      sortOrder: sortRef.current++,
+                    });
+                    showBotMessage(EXTRA_INPUT_PROMPT, undefined, () => {
+                      addMessage({
+                        role: 'bot',
+                        content: EXTRA_INPUT_PROMPT,
+                        sortOrder: sortRef.current++,
+                      });
+                      setPhase('extra_input');
+                    });
+                  }}
+                />
+              </div>
             );
           }
 
           return (
-            <ChatBubble
-              key={i}
-              role={msg.role}
-              content={msg.content}
-              hint={msg.hint}
-              showAvatar={msg.role === 'bot'}
-            />
+            <div key={i} ref={msg.role === 'bot' && isLast ? latestBotRef : undefined}>
+              <ChatBubble
+                role={msg.role}
+                content={msg.content}
+                hint={msg.hint}
+                showAvatar={msg.role === 'bot'}
+              />
+            </div>
           );
         })}
-        {typing && <TypingBubble />}
         <div ref={bottomRef} />
       </div>
 
-      <div className="fixed bottom-0 left-1/2 w-full max-w-[375px] -translate-x-1/2 bg-white">
+      <div
+        className="fixed bottom-0 left-1/2 w-full max-w-[375px] -translate-x-1/2 bg-white"
+        style={{ bottom: bottomPad }}
+      >
         {showInput && (
           <ChatInputBar
             value={input}

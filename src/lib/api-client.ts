@@ -75,6 +75,9 @@ export const api = {
 
   getRecord: (token: string, id: string) => request<Record>(`/records/${id}`, { token }),
 
+  deleteRecord: (token: string, id: string) =>
+    request<{ ok: boolean }>(`/records/${id}`, { method: 'DELETE', token }),
+
   getCalendarDates: (token: string, from: string, to: string) =>
     request<string[]>(`/records/calendar?from=${from}&to=${to}`, { token }),
 

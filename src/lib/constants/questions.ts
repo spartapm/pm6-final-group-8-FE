@@ -1,4 +1,5 @@
 import type { ExperienceCategoryId } from './categories';
+import { getEmotionBucket } from './categories';
 
 export type QuestionSet = {
   q1: string;
@@ -10,13 +11,29 @@ export type QuestionSet = {
 };
 
 const negative: Record<ExperienceCategoryId, QuestionSet> = {
-  job_prep: {
-    q1: '오늘 취업 준비하면서 어떤 일이 있었나요?',
-    h1: '(예: 자소서 항목에서 막힘, 정리 안 된 답변 등)',
+  work: {
+    q1: '오늘 근무하면서 어떤 일이 있었나요?',
+    h1: '(예: 컴플레인, 바빴던 순간, 동료와의 마찰 등)',
+    q2: '그때 어떻게 했나요?',
+    h2: '(예: 먼저 사과함, 순서 정해서 처리함, 매니저한테 보고함 등)',
+    q3: '그 결과 어떤 변화가 있었나요?',
+    h3: '(예: 상황 진정됨, 아직 해결 안 됨, 다음에 또 반복될 것 같음 등)',
+  },
+  resume: {
+    q1: '오늘 자소서/이력서 작성하면서 어떤 일이 있었나요?',
+    h1: '(예: 항목에서 막힘, 정리 안 된 답변, 분량 못 채움 등)',
     q2: '어떻게 해결하려고 했나요?',
-    h2: '(예: 친구한테 피드백 받음, 다른 표현 시도함, 예시 찾아봄 등)',
+    h2: '(예: 친구한테 피드백 받음, 다른 표현 시도함, 예시 찾아본 등)',
     q3: '그 결과 어떤 변화가 있었나요?',
     h3: '(예: 다시 씀, 아직 막막함, 방향 다시 잡음 등)',
+  },
+  interview: {
+    q1: '오늘 면접/채용 준비하면서 어떤 일이 있었나요?',
+    h1: '(예: 답변이 꼬임, 예상 못한 질문에 당황, 시간 안에 못 풂 등)',
+    q2: '어떻게 해결하려고 했나요?',
+    h2: '(예: 답변 다시 정리함, 스터디원한테 피드백 받음, 기출 다시 찾아봄 등)',
+    q3: '그 결과 어떤 변화가 있었나요?',
+    h3: '(예: 아직 어색함, 다음에 다시 연습하기로 함, 약점 파악함 등)',
   },
   study: {
     q1: '오늘 공부하면서 어떤 일이 있었나요?',
@@ -27,20 +44,12 @@ const negative: Record<ExperienceCategoryId, QuestionSet> = {
     h3: '(예: 이해함, 아직 못 풀었음, 다음으로 미룸 등)',
   },
   project: {
-    q1: '오늘 어떤 일이 있었나요?',
+    q1: '오늘 프로젝트/과제하면서 어떤 일이 있었나요?',
     h1: '(예: 의견 충돌, 일정 지연, 역할 분담 문제 등)',
     q2: '막힌 부분을 어떻게 해결해보려고 했나요?',
     h2: '(예: 의견 다시 정리해서 말함, 양보함, 다른 방법 제안함 등)',
     q3: '그 다음 팀 반응이나 결과는 어땠나요?',
     h3: '(예: 합의됨, 여전히 애매함, 결국 각자 진행함 등)',
-  },
-  work: {
-    q1: '오늘 근무하면서 어떤 일이 있었나요?',
-    h1: '(예: 컴플레인, 바빴던 순간, 동료와의 마찰 등)',
-    q2: '그때 어떻게 했나요?',
-    h2: '(예: 먼저 사과함, 순서 정해서 처리함, 매니저한테 보고함 등)',
-    q3: '그 결과 어떤 변화가 있었나요?',
-    h3: '(예: 상황 진정됨, 아직 해결 안 됨, 다음에 또 반복될 것 같음 등)',
   },
   activity: {
     q1: '오늘 모임에서 어떤 일이 있었나요?',
@@ -50,7 +59,7 @@ const negative: Record<ExperienceCategoryId, QuestionSet> = {
     q3: '그 결과 어떤 변화가 있었나요?',
     h3: '(예: 잘 마무리됨, 여전히 애매함, 다음에 다시 얘기하기로 함 등)',
   },
-  daily: {
+  other: {
     q1: '오늘 무슨 일이 있었나요?',
     h1: '(예: 일정 겹침, 예상 못한 상황, 갑작스러운 연락 등)',
     q2: '그때 어떻게 했나요?',
@@ -60,14 +69,89 @@ const negative: Record<ExperienceCategoryId, QuestionSet> = {
   },
 };
 
+const neutral: Record<ExperienceCategoryId, QuestionSet> = {
+  work: {
+    q1: '오늘 근무하면서 어떤 일이 있었나요?',
+    h1: '(예: 평소랑 비슷한 업무, 특별한 이슈 없음, 루틴대로 진행 등)',
+    q2: '그때 어떻게 했나요?',
+    h2: '(예: 하던 대로 처리함, 별다른 대응 안 함, 정해진 순서대로 함 등)',
+    q3: '그 결과 어떤 변화가 있었나요?',
+    h3: '(예: 그냥 무난히 지나감, 딱히 달라진 거 없음, 평소와 비슷하게 마무리됨 등)',
+  },
+  resume: {
+    q1: '오늘 자소서/이력서 작성하면서 어떤 일이 있었나요?',
+    h1: '(예: 정해진 분량만 채움, 큰 고민 없이 씀, 미루다가 조금만 함 등)',
+    q2: '그때 어떻게 했나요?',
+    h2: '(예: 예전에 쓴 거 그대로 둠, 형식만 정리함, 일단 저장만 해둠 등)',
+    q3: '그 결과 어떤 변화가 있었나요?',
+    h3: '(예: 딱히 나아진 건 없음, 그대로 보류됨, 다음에 다시 보기로 함 등)',
+  },
+  interview: {
+    q1: '오늘 면접/채용 준비하면서 어떤 일이 있었나요?',
+    h1: '(예: 정해진 분량만 품, 늘 하던 대로 연습함, 특별한 진전 없음 등)',
+    q2: '그때 어떻게 했나요?',
+    h2: '(예: 하던 방식 그대로 함, 별다른 대응 없이 넘어감, 시간 맞춰서만 함 등)',
+    q3: '그 결과 어떤 변화가 있었나요?',
+    h3: '(예: 그냥저냥 끝남, 크게 달라진 거 없음, 다음으로 미룸 등)',
+  },
+  study: {
+    q1: '오늘 공부하면서 어떤 일이 있었나요?',
+    h1: '(예: 정해진 분량만 함, 늘 하던 만큼 진행함, 특별한 이슈 없음 등)',
+    q2: '그때 어떻게 했나요?',
+    h2: '(예: 하던 방식 그대로 함, 계획한 만큼만 함, 별다른 노력 없이 함 등)',
+    q3: '그 결과 어떤 변화가 있었나요?',
+    h3: '(예: 그냥저냥 진행됨, 딱히 달라진 거 없음, 평소랑 비슷함 등)',
+  },
+  project: {
+    q1: '오늘 프로젝트/과제하면서 어떤 일이 있었나요?',
+    h1: '(예: 정해진 만큼만 진행함, 특별한 이슈 없이 넘어감, 늘 하던 대로 진행됨 등)',
+    q2: '그때 어떻게 했나요?',
+    h2: '(예: 하던 대로 역할 수행함, 별다른 의견 없이 따름, 정해진 일정대로만 함 등)',
+    q3: '그 다음 팀 반응이나 결과는 어땠나요?',
+    h3: '(예: 그냥저냥 진행됨, 크게 달라진 거 없음, 다음 회의로 넘어감 등)',
+  },
+  activity: {
+    q1: '오늘 모임에서 어떤 일이 있었나요?',
+    h1: '(예: 평소랑 비슷한 활동, 특별한 이슈 없음, 정해진 순서대로 진행됨 등)',
+    q2: '그때 어떻게 했나요?',
+    h2: '(예: 하던 역할 그대로 함, 별다른 의견 없이 참여함, 정해진 대로만 함 등)',
+    q3: '그 결과 어떤 변화가 있었나요?',
+    h3: '(예: 그냥저냥 지나감, 딱히 달라진 거 없음, 평소와 비슷하게 끝남 등)',
+  },
+  other: {
+    q1: '오늘 무슨 일이 있었나요?',
+    h1: '(예: 평소랑 비슷한 하루, 특별한 일 없음, 계획대로만 흘러감 등)',
+    q2: '그때 어떻게 했나요?',
+    h2: '(예: 하던 대로 처리함, 별다른 대응 없이 넘어감, 그냥 흘러가는 대로 둠 등)',
+    q3: '그 결과 어떤 변화가 있었나요?',
+    h3: '(예: 그냥저냥 지나감, 딱히 달라진 거 없음, 평소와 비슷하게 마무리됨 등)',
+  },
+};
+
 const positive: Record<ExperienceCategoryId, QuestionSet> = {
-  job_prep: {
+  work: {
+    q1: '오늘 근무하면서 어떤 점이 좋았나요?',
+    h1: '(예: 잘 넘긴 순간, 칭찬받은 일, 뿌듯했던 순간 등)',
+    q2: '그때 어떻게 했나요?',
+    h2: '(예: 먼저 나서서 처리함, 손님/동료에게 설명함, 미리 준비해둠 등)',
+    q3: '그 다음 반응이나 결과는 어땠나요?',
+    h3: '(예: 고맙다는 말 들음, 매니저가 알아줌, 스스로 뿌듯함 등)',
+  },
+  resume: {
     q1: '오늘 내용 중에 뭐가 마음에 드나요?',
     h1: '(예: 잘 풀어낸 경험, 미리 준비해둔 스토리, 계획대로 진행된 부분 등)',
     q2: '그걸 위해 어떤 걸 해봤나요?',
     h2: '(예: 개요부터 짬, 경험 다시 정리함, 여러 번 고쳐씀 등)',
     q3: '그 결과 어떤 변화가 있었나요?',
     h3: '(예: 자신감 생김, 방향이 명확해짐, 만족스러움 등)',
+  },
+  interview: {
+    q1: '오늘 면접/채용 준비하면서 어떤 점이 좋았나요?',
+    h1: '(예: 답변이 매끄럽게 나옴, 예상 질문 맞춤, 시간 안에 풂 등)',
+    q2: '그걸 위해 어떤 걸 해봤나요?',
+    h2: '(예: 미리 답변 준비함, 스터디원과 연습함, 반복해서 말해봄 등)',
+    q3: '그 결과 어떤 변화가 있었나요?',
+    h3: '(예: 자신감 생김, 약점 보완됨, 실전 감각 늘어남 등)',
   },
   study: {
     q1: '오늘 공부하면서 뭐가 기억에 남았나요?',
@@ -85,14 +169,6 @@ const positive: Record<ExperienceCategoryId, QuestionSet> = {
     q3: '그 다음 팀 반응이나 결과는 어땠나요?',
     h3: '(예: 다들 동의함, 진행 속도 빨라짐, 분위기 좋아짐 등)',
   },
-  work: {
-    q1: '오늘 근무하면서 어떤 점이 좋았나요?',
-    h1: '(예: 잘 넘긴 순간, 칭찬받은 일, 뿌듯했던 순간 등)',
-    q2: '그때 어떻게 했나요?',
-    h2: '(예: 먼저 나서서 처리함, 손님/동료에게 설명함, 미리 준비해둠 등)',
-    q3: '그 다음 반응이나 결과는 어땠나요?',
-    h3: '(예: 고맙다는 말 들음, 매니저가 알아줌, 스스로 뿌듯함 등)',
-  },
   activity: {
     q1: '오늘 모임에서 어떤 점이 좋았나요?',
     h1: '(예: 내가 낸 아이디어, 새로 맡은 역할, 잘 맞춘 협업 등)',
@@ -101,9 +177,9 @@ const positive: Record<ExperienceCategoryId, QuestionSet> = {
     q3: '그 다음 반응이나 결과는 어땠나요?',
     h3: '(예: 다들 좋아함, 채택됨, 분위기 좋아짐 등)',
   },
-  daily: {
+  other: {
     q1: '오늘 시간이나 상황 관리하면서 어떤 점이 좋았나요?',
-    h1: '(예: 계획대로 진행됨, 갑작스러운 일 잘 넘김, 여유 있게 마무리함 등)',
+    h1: '(예: 계획대로 진행됨, 갑작스런 일 잘 넘김, 여유 있게 마무리함 등)',
     q2: '그걸 위해 해본 행동이 있나요?',
     h2: '(예: 전날 리스트 만듦, 순서 미리 정함, 즉석에서 대처함 등)',
     q3: '그 결과 어떤 변화가 있었나요?',
@@ -111,12 +187,51 @@ const positive: Record<ExperienceCategoryId, QuestionSet> = {
   },
 };
 
-/** 감정 1~3: 나빴음, 4~5: 좋았음 */
+const GREETINGS_NEGATIVE = [
+  '오늘 좀 힘드셨나 봐요...',
+  '오늘 기분이 안 좋으셨나 봐요',
+  '오늘 하루 쉽지 않으셨나 봐요',
+  '오늘 마음이 좀 편치 않으셨나 봐요',
+  '힘든 하루 보내셨네요, 고생 많으셨어요',
+];
+
+const GREETINGS_NEUTRAL = [
+  '오늘은 그냥 평범한 하루였나 봐요',
+  '오늘은 무난하게 지나가셨나 봐요',
+  '오늘은 특별한 일 없이 흘러갔나 봐요',
+  '오늘은 그냥저냥한 하루였나 봐요',
+  '오늘도 평소랑 비슷하게 보내셨나 봐요',
+];
+
+const GREETINGS_POSITIVE = [
+  '오늘 하루 잘 풀리셨나 봐요, 좋네요!',
+  '좋은 하루 보내셨다니 다행이에요!',
+  '오늘 기분 좋은 일이 있으셨나 봐요!',
+  '오늘 하루 만족스러우셨나 봐요!',
+];
+
+export const INTRO_FIXED =
+  '오늘의 경험을 정리하기 위해 경험과 상황, 결과에 대한 질문 3가지를 드릴게요.\n\n질문에 답하다 보면 경험을 자연스럽게 돌아볼 수 있어요';
+
+export function getRandomGreeting(emotionLevel: number): string {
+  const bucket = getEmotionBucket(emotionLevel);
+  const pool =
+    bucket === 'negative'
+      ? GREETINGS_NEGATIVE
+      : bucket === 'neutral'
+        ? GREETINGS_NEUTRAL
+        : GREETINGS_POSITIVE;
+  return pool[Math.floor(Math.random() * pool.length)]!;
+}
+
 export function getQuestionSet(
   category: ExperienceCategoryId,
   emotionLevel: number,
 ): QuestionSet {
-  return emotionLevel <= 3 ? negative[category] : positive[category];
+  const bucket = getEmotionBucket(emotionLevel);
+  if (bucket === 'negative') return negative[category];
+  if (bucket === 'neutral') return neutral[category];
+  return positive[category];
 }
 
 export function getQuestions(category: ExperienceCategoryId, emotionLevel: number): string[] {
@@ -129,8 +244,10 @@ export function getQuestionHints(category: ExperienceCategoryId, emotionLevel: n
   return [set.h1, set.h2, set.h3];
 }
 
-export const EXTRA_QUESTION = '혹시 더 남기고 싶은 이야기가 있나요?';
-export const EXTRA_QUESTION_HINT = '사소한 생각이나 감정이어도 괜찮아요.';
+export const EXTRA_QUESTION = '지금 기록에서 추가하고 싶은 내용이 있나요?';
+export const EXTRA_INPUT_PROMPT = '추가할 내용을 적어주세요!';
+export const EXTRA_MORE_LABEL = '내용 추가하기';
+export const EXTRA_SAVE_LABEL = '저장하고 결과 보기';
 
 export const EMPTY_SAVE_MESSAGE = '오늘은 글로 남기지 않고 저장할까요?';
 export const EMPTY_SAVE_SUBMESSAGE = '쉬어간 날도 기록이에요.';

@@ -17,7 +17,7 @@ export function InsightModal({ open, periodDays, insights, onClose }: InsightMod
   return (
     <MobileOverlay className="min-h-dvh bg-white">
       <header className="relative flex h-[50px] shrink-0 items-center justify-center px-3.5">
-        <h1 className="text-[20px] font-black text-foreground">AI 인사이트</h1>
+        <h1 className="text-[20px] font-black text-foreground">인사이트</h1>
         <button
           type="button"
           onClick={onClose}
@@ -36,7 +36,7 @@ export function InsightModal({ open, periodDays, insights, onClose }: InsightMod
         </h2>
 
         <div className="mt-5 rounded-[14px] bg-[#f8d9da]/50 px-4 py-4">
-          <p className="text-[13px] font-bold text-primary">AI 인사이트</p>
+          <p className="text-[13px] font-bold text-primary">인사이트</p>
 
           <div className="mt-4 space-y-5">
             {insights.map((ins) => (

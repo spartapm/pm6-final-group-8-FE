@@ -25,19 +25,27 @@ export function ChatBubble({ role, content, hint, showAvatar = true }: ChatBubbl
   }
 
   return (
-    <div className="flex gap-2 pr-8">
-      {showAvatar && (
+    <div className="flex items-end gap-1.5 pr-8">
+      {showAvatar ? (
         <FigmaImage
           src={figmaAssets.botAvatar}
           alt=""
-          width={22}
+          width={25}
           height={22}
-          className="mt-1 h-[22px] w-[22px] shrink-0 rounded-full object-cover"
+          className="mb-0.5 h-[22px] w-[25px] shrink-0 object-contain"
         />
+      ) : (
+        <span className="w-[25px] shrink-0" aria-hidden />
       )}
-      <div className="max-w-[78%] rounded-bl-[3px] rounded-br-[14px] rounded-tl-[14px] rounded-tr-[14px] bg-[#f1f1f1] px-4 py-3 text-[14px] leading-[15px] text-foreground">
-        <p>{content}</p>
-        {hint ? <p className="mt-1 text-[9.5px] leading-[15px] text-olive">{hint}</p> : null}
+      <div className="max-w-[78%] rounded-bl-[3px] rounded-br-[14px] rounded-tl-[14px] rounded-tr-[14px] bg-[#f1f1f1] px-4 py-3">
+        <p className="whitespace-pre-line text-[14px] font-medium leading-[20px] text-foreground">
+          {content}
+        </p>
+        {hint ? (
+          <p className="mt-1 whitespace-pre-line text-[12px] font-normal leading-[18px] text-olive">
+            {hint}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -52,31 +60,37 @@ interface ExtraQuestionBubbleProps {
 
 export function ExtraQuestionBubble({ content, hint, onSkip, onMore }: ExtraQuestionBubbleProps) {
   return (
-    <div className="flex gap-2 pr-8">
+    <div className="flex items-end gap-1.5 pr-8">
       <FigmaImage
         src={figmaAssets.botAvatar}
         alt=""
-        width={22}
+        width={25}
         height={22}
-        className="mt-1 h-[22px] w-[22px] shrink-0 rounded-full object-cover"
+        className="mb-0.5 h-[22px] w-[25px] shrink-0 object-contain"
       />
-      <div className="max-w-[78%] rounded-bl-[3px] rounded-br-[14px] rounded-tl-[14px] rounded-tr-[14px] bg-[#f1f1f1] px-4 py-3 text-[14px] leading-[15px] text-foreground">
-        <p>{content}</p>
-        {hint ? <p className="mt-1 text-[9.5px] leading-[15px] text-olive">{hint}</p> : null}
+      <div className="max-w-[78%] rounded-bl-[3px] rounded-br-[14px] rounded-tl-[14px] rounded-tr-[14px] bg-[#f1f1f1] px-4 py-3">
+        <p className="whitespace-pre-line text-[14px] font-medium leading-[20px] text-foreground">
+          {content}
+        </p>
+        {hint ? (
+          <p className="mt-1.5 whitespace-pre-line text-[12px] font-normal leading-[18px] text-olive">
+            {hint}
+          </p>
+        ) : null}
         <div className="mt-3 space-y-2">
-          <button
-            type="button"
-            onClick={onSkip}
-            className="h-10 w-full rounded-[20px] bg-[#a07868] text-[14px] font-medium text-white"
-          >
-            아니 할말 다 했어
-          </button>
           <button
             type="button"
             onClick={onMore}
             className="h-10 w-full rounded-[20px] border border-[#c8c8c8] bg-white text-[14px] font-medium text-foreground"
           >
-            응 더 이야기 할래
+            내용 추가하기
+          </button>
+          <button
+            type="button"
+            onClick={onSkip}
+            className="h-10 w-full rounded-[20px] bg-[#a07868] text-[14px] font-medium text-white"
+          >
+            저장하고 결과 보기
           </button>
         </div>
       </div>
@@ -90,13 +104,13 @@ interface TypingBubbleProps {
 
 export function TypingBubble({ className }: TypingBubbleProps) {
   return (
-    <div className={cn('flex gap-2 pr-8', className)}>
+    <div className={cn('flex items-end gap-1.5 pr-8', className)}>
       <FigmaImage
         src={figmaAssets.botAvatar}
         alt=""
-        width={22}
+        width={25}
         height={22}
-        className="mt-1 h-[22px] w-[22px] shrink-0 rounded-full object-cover"
+        className="mb-0.5 h-[22px] w-[25px] shrink-0 object-contain"
       />
       <div className="rounded-bl-[3px] rounded-br-[14px] rounded-tl-[14px] rounded-tr-[14px] bg-[#f1f1f1] px-4 py-3 text-[36px] leading-[15px] text-foreground">
         …
@@ -120,7 +134,7 @@ export function ChatInputBar({
   onSend,
   disabled,
   sendDisabled,
-  placeholder = '짧게 한 줄도 괜찮아요.',
+  placeholder = '자세히 작성할수록 분석에 도움이 됩니다.',
 }: ChatInputBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const shouldRefocusRef = useRef(false);

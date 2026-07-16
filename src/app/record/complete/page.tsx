@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { FigmaImage } from '@/components/ui/FigmaImage';
 import { RecordDetailCard } from '@/components/record/RecordDetailCard';
+import { CompetencyTagExplainModal } from '@/components/record/CompetencyTagExplainModal';
 import { figmaAssets } from '@/lib/figma-assets';
 import { useRecordDraft } from '@/hooks/useRecordDraft';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -21,6 +22,7 @@ function CompleteContent() {
   const { reset } = useRecordDraft();
   useRequireAuth();
   const [record, setRecord] = useState<Record | null>(null);
+  const [explainOpen, setExplainOpen] = useState(false);
 
   useEffect(() => {
     reset();
@@ -41,6 +43,8 @@ function CompleteContent() {
     );
   }
 
+  const hasTags = (record.tags?.length ?? 0) > 0;
+
   return (
     <div className="flex min-h-dvh flex-col bg-white px-4 pb-6 pt-8">
       <div className="flex flex-col items-center">
@@ -49,10 +53,24 @@ function CompleteContent() {
           <span className="text-[22px] font-black text-primary">기록</span>
           <span className="text-[18px] font-black"> 완료!</span>
         </h1>
+        {record.status === 'SAVED_UNANALYZED' && (
+          <p className="mt-2 text-center text-[20px] font-bold leading-[28px] text-olive">
+            적절한 역량 태그를 찾을 수 없었어요.
+          </p>
+        )}
       </div>
 
       <div className="mt-6 flex-1 overflow-y-auto">
-        <RecordDetailCard record={record} />
+        <RecordDetailCard record={record} hideUnanalyzedBanner />
+        {hasTags && (
+          <button
+            type="button"
+            onClick={() => setExplainOpen(true)}
+            className="mt-3 text-left text-[14px] font-bold text-primary"
+          >
+            → 나의 역량 태그 설명
+          </button>
+        )}
       </div>
 
       <div className="mt-4 flex flex-col gap-2.5">
@@ -68,6 +86,12 @@ function CompleteContent() {
           홈으로 돌아가기
         </Button>
       </div>
+
+      <CompetencyTagExplainModal
+        open={explainOpen}
+        tags={record.tags ?? []}
+        onClose={() => setExplainOpen(false)}
+      />
     </div>
   );
 }

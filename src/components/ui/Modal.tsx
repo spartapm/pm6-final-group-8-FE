@@ -13,6 +13,8 @@ interface ModalProps {
   onConfirm?: () => void;
   cancelLabel?: string;
   onCancel?: () => void;
+  /** stack: 세로(기본) / row: 네·아니오 가로 배치 */
+  actionsLayout?: 'stack' | 'row';
   className?: string;
 }
 
@@ -25,24 +27,28 @@ export function Modal({
   onConfirm,
   cancelLabel,
   onCancel,
+  actionsLayout = 'stack',
   className,
 }: ModalProps) {
   if (!open) return null;
+
+  const isRow = actionsLayout === 'row' && Boolean(cancelLabel);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div
         className={cn(
-          'w-full max-w-[320px] rounded-2xl bg-white p-6 shadow-xl',
+          'w-full max-w-[300px] rounded-[20px] bg-white px-5 pb-5 pt-8 shadow-[0_8px_28px_rgba(0,0,0,0.18)]',
           className,
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {title && <h3 className="mb-3 text-center text-[18px] font-bold">{title}</h3>}
-        <div className="mb-6 text-center text-[15px] text-neutral-700">{children}</div>
-        <div className="flex flex-col gap-2">
+        <div className="mb-6 text-center text-[15px] font-bold text-foreground">{children}</div>
+        <div className={cn(isRow ? 'flex gap-2.5' : 'flex flex-col gap-2')}>
           <Button
             fullWidth
+            className={cn(isRow && 'h-11 flex-1 py-0 text-[15px]')}
             onClick={() => {
               onConfirm?.();
               onClose();
@@ -52,8 +58,12 @@ export function Modal({
           </Button>
           {cancelLabel && (
             <Button
-              variant="ghost"
+              variant={isRow ? 'secondary' : 'ghost'}
               fullWidth
+              className={cn(
+                isRow &&
+                  'h-11 flex-1 border-0 bg-[#d9d9d9] py-0 text-[15px] text-[#5a5a5a] hover:bg-[#cfcfcf]',
+              )}
               onClick={() => {
                 onCancel?.();
                 onClose();

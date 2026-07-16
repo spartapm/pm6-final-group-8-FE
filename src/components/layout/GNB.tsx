@@ -30,13 +30,17 @@ export function GNB() {
               alt=""
               width={20}
               height={20}
-              className={cn('h-5 w-5 object-contain', !active && 'opacity-60')}
-              style={active ? { filter: 'none' } : { filter: 'grayscale(1) brightness(0.7)' }}
+              className={cn('h-5 w-5 object-contain', !active && 'opacity-45')}
+              style={
+                active
+                  ? undefined
+                  : { filter: 'grayscale(1) brightness(0.85)' }
+              }
             />
             <span
               className={cn(
-                'text-[9.5px] font-bold',
-                active ? 'text-primary' : 'text-olive',
+                'text-[9.5px]',
+                active ? 'font-black text-primary' : 'font-bold text-olive',
               )}
             >
               {tab.label}
