@@ -11,8 +11,8 @@ import { figmaAssets } from '@/lib/figma-assets';
 import { getDevSession, isDevAuth } from '@/lib/supabase/client';
 import { AnalyticsEvent, capture } from '@/lib/analytics';
 
-// UT 기간 동안 소셜 로그인 임시 비활성화 (로직은 유지, UT 종료 후 false로 되돌리면 복구)
-const UT_SOCIAL_LOGIN_DISABLED = true;
+// Google 로그인만 임시 비활성화 (카카오는 허용)
+const UT_GOOGLE_LOGIN_DISABLED = true;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function LoginPage() {
   }
 
   function handleSocialClick(provider: 'kakao' | 'google') {
-    if (UT_SOCIAL_LOGIN_DISABLED) {
+    if (provider === 'google' && UT_GOOGLE_LOGIN_DISABLED) {
       showToast('준비 중입니다.');
       return;
     }
