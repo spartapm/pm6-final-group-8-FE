@@ -1,5 +1,6 @@
 export const figmaAssets = {
   logo: '/figma/logo.png',
+  splashLogo: '/figma/splash-logo.png',
   loginLogo: '/figma/login-logo.png',
   lock: '/figma/policy-lock.png',
   policyLock: '/figma/policy-lock.png',

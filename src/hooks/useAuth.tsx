@@ -10,6 +10,7 @@ import {
   clearDevSession,
   type DevSession,
 } from '@/lib/supabase/client';
+import { getClientAppOrigin } from '@/lib/app-origin';
 
 interface AuthContextValue {
   session: DevSession | null;
@@ -107,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${getClientAppOrigin()}/auth/callback` },
     });
     if (error) throw error;
   }, []);

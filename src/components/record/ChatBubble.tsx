@@ -81,14 +81,14 @@ export function ExtraQuestionBubble({ content, hint, onSkip, onMore }: ExtraQues
           <button
             type="button"
             onClick={onMore}
-            className="h-10 w-full rounded-[20px] border border-[#c8c8c8] bg-white text-[14px] font-medium text-foreground"
+            className="h-10 w-full rounded-[14px] bg-[#564444] text-[13px] font-bold text-white shadow-[0px_4px_5.2px_rgba(0,0,0,0.3)]"
           >
             내용 추가하기
           </button>
           <button
             type="button"
             onClick={onSkip}
-            className="h-10 w-full rounded-[20px] bg-[#a07868] text-[14px] font-medium text-white"
+            className="h-10 w-full rounded-[14px] border border-[#c8c8c8] bg-white text-[13px] font-bold text-foreground"
           >
             저장하고 결과 보기
           </button>

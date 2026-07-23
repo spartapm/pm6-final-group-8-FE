@@ -9,6 +9,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api-client';
 import { EXPERIENCE_CATEGORIES } from '@/lib/constants/categories';
+import { loadMyRecordsFilter, saveMyRecordsFilter } from '@/lib/nav-state';
+import { getAllRecordsCache, setAllRecordsCache } from '@/lib/screen-cache';
 import type { Record } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +20,10 @@ const FILTER_OPTIONS: Array<{ id: CategoryFilter; label: string }> = [
   { id: 'all', label: '전체' },
   ...EXPERIENCE_CATEGORIES.map((c) => ({ id: c.id as CategoryFilter, label: c.label })),
 ];
+
+function isValidFilter(value: string | null): value is CategoryFilter {
+  return Boolean(value && FILTER_OPTIONS.some((o) => o.id === value));
+}
 
 function FilterIcon({ className }: { className?: string }) {
   return (
@@ -44,19 +50,45 @@ export default function AllRecordsPage() {
   const router = useRouter();
   const { getToken } = useAuth();
   const { loading: authLoading } = useRequireAuth();
-  const [records, setRecords] = useState<Record[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [records, setRecords] = useState<Record[]>(() => getAllRecordsCache() ?? []);
+  const [loading, setLoading] = useState(() => getAllRecordsCache() == null);
   const [filter, setFilter] = useState<CategoryFilter>('all');
+  const [filterReady, setFilterReady] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+
+  // 상세→뒤로가기 시 필터 복원 (저장 effect보다 먼저 준비)
+  useEffect(() => {
+    const saved = loadMyRecordsFilter();
+    if (isValidFilter(saved)) setFilter(saved);
+    setFilterReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!filterReady) return;
+    saveMyRecordsFilter(filter);
+  }, [filter, filterReady]);
 
   useEffect(() => {
     if (authLoading) return;
     const token = getToken();
     if (!token) return;
+
+    const cached = getAllRecordsCache();
+    if (cached) {
+      setRecords(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     api
       .getAllRecords(token)
-      .then((r) => setRecords(r as Record[]))
+      .then((r) => {
+        const list = r as Record[];
+        setAllRecordsCache(list);
+        setRecords(list);
+      })
       .finally(() => setLoading(false));
   }, [authLoading, getToken]);
 

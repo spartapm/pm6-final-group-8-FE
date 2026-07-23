@@ -245,7 +245,10 @@ export function getQuestionHints(category: ExperienceCategoryId, emotionLevel: n
 }
 
 export const EXTRA_QUESTION = '지금 기록에서 추가하고 싶은 내용이 있나요?';
+/** 채팅 입력 유도 문구 (저장·상세 표시용 질문과 분리) */
 export const EXTRA_INPUT_PROMPT = '추가할 내용을 적어주세요!';
+/** 완료/상세 Q&A에 노출하는 추가 답변 질문 라벨 */
+export const EXTRA_ANSWER_QUESTION = '혹시 더 남기고 싶은 이야기가 있나요?';
 export const EXTRA_MORE_LABEL = '내용 추가하기';
 export const EXTRA_SAVE_LABEL = '저장하고 결과 보기';
 

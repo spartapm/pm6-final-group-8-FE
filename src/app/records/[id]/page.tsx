@@ -7,10 +7,12 @@ import { RecordDetailCard } from '@/components/record/RecordDetailCard';
 import { CompetencyTagExplainModal } from '@/components/record/CompetencyTagExplainModal';
 import { FigmaImage } from '@/components/ui/FigmaImage';
 import { Modal } from '@/components/ui/Modal';
+import { ErrorModal } from '@/components/ui/ErrorModal';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
-import { api } from '@/lib/api-client';
+import { api, ApiError } from '@/lib/api-client';
 import { figmaAssets } from '@/lib/figma-assets';
+import { invalidateRecordCaches } from '@/lib/screen-cache';
 import type { Record } from '@/types';
 
 function DetailContent() {
@@ -25,6 +27,7 @@ function DetailContent() {
   const [explainOpen, setExplainOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   const loadRecord = useCallback(async () => {
     const token = getToken();
@@ -41,28 +44,38 @@ function DetailContent() {
     loadRecord();
   }, [loadRecord]);
 
+  function landingPath() {
+    if (from === 'home') return '/home';
+    if (from === 'report') return '/report';
+    if (from === 'my-records') return '/my/records';
+    return '/my/records';
+  }
+
   function handleBack() {
     if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back();
       return;
     }
-    const fallback =
-      from === 'home' ? '/home' : from === 'report' ? '/report' : '/my/records';
-    router.replace(fallback);
+    router.replace(landingPath());
   }
 
   async function handleDelete() {
     const token = getToken();
     if (!token || !id) return;
     setDeleting(true);
+    setError(null);
     try {
       await api.deleteRecord(token, id);
-      const fallback =
-        from === 'home' ? '/home' : from === 'report' ? '/report' : '/my/records';
-      router.replace(fallback);
+      invalidateRecordCaches();
+      setDeleteOpen(false);
+      router.replace(landingPath());
     } catch (e) {
       console.error(e);
       setDeleting(false);
+      // TypeError/네트워크는 api-client가 전역 모달을 띄움 — 중복 ErrorModal 생략
+      if (!(e instanceof ApiError && e.status === 0)) {
+        setError(e instanceof Error ? e : new Error('삭제에 실패했어요. 다시 시도해주세요.'));
+      }
     }
   }
 
@@ -121,10 +134,14 @@ function DetailContent() {
 
       <Modal
         open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
+        onClose={() => {
+          if (!deleting) setDeleteOpen(false);
+        }}
         confirmLabel="네"
         cancelLabel="아니오"
         actionsLayout="row"
+        closeOnConfirm={false}
+        confirmLoading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteOpen(false)}
       >
@@ -141,6 +158,15 @@ function DetailContent() {
           </p>
         </div>
       </Modal>
+
+      <ErrorModal
+        error={error}
+        onClose={() => setError(null)}
+        onRetry={() => {
+          setError(null);
+          setDeleteOpen(true);
+        }}
+      />
     </div>
   );
 }

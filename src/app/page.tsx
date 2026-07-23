@@ -48,8 +48,14 @@ export default function SplashPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[#fbf8f9] px-[15px]">
       <div className="flex flex-col items-center text-center">
-        <div className="relative mb-6 h-[113px] w-[113px]">
-          <FigmaImage src={figmaAssets.logo} alt="콩팟 로고" fill className="object-contain" priority />
+        <div className="relative mb-6 h-[138px] w-[169px] translate-x-4 translate-y-2">
+          <FigmaImage
+            src={figmaAssets.splashLogo}
+            alt="콩팟 로고"
+            fill
+            className="object-contain"
+            priority
+          />
         </div>
         <h1 className="text-[38px] font-bold tracking-[0.57px] text-primary">콩팟</h1>
         <p className="mt-1 text-[20px] font-bold tracking-[0.57px] text-foreground">심은대로 거둔다</p>

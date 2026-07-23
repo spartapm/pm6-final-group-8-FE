@@ -130,11 +130,8 @@ export function DateRangePicker({ open, from, to, onConfirm, onCancel }: DateRan
             >
               ‹
             </button>
-            <div className="flex items-center gap-1 text-[13px] font-bold text-foreground">
-              <span>{format(viewMonth, 'yyyy년', { locale: ko })}</span>
-              <span className="text-olive">▾</span>
-              <span className="ml-1">{format(viewMonth, 'M월', { locale: ko })}</span>
-              <span className="text-olive">▾</span>
+            <div className="text-[13px] font-bold text-foreground">
+              {format(viewMonth, 'yyyy년 M월', { locale: ko })}
             </div>
             <button
               type="button"

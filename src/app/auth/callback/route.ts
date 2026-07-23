@@ -2,9 +2,11 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getPostAuthPath } from '@/lib/auth-utils';
+import { getRequestAppOrigin } from '@/lib/app-origin';
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = getRequestAppOrigin(request);
   const code = searchParams.get('code');
 
   if (code) {

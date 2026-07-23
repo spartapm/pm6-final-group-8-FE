@@ -9,6 +9,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api-client';
 import { figmaAssets } from '@/lib/figma-assets';
+import { getUserStatsCache, setUserStatsCache } from '@/lib/screen-cache';
 import type { UserStats } from '@/types';
 
 const MINI_BAR_HEIGHTS = [7, 14.5, 7, 21.5, 28.5, 21.5, 35.5, 28.5, 43, 35.5, 52, 35.5];
@@ -18,14 +19,20 @@ export default function MyPage() {
   const router = useRouter();
   const { signOut, getToken, session } = useAuth();
   const { loading: authLoading } = useRequireAuth();
-  const [stats, setStats] = useState<UserStats | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(() => getUserStatsCache());
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
     const token = getToken();
     if (!token) return;
-    api.getUserStats(token).then(setStats).catch(console.error);
+    api
+      .getUserStats(token)
+      .then((data) => {
+        setUserStatsCache(data);
+        setStats(data);
+      })
+      .catch(console.error);
   }, [authLoading, getToken]);
 
   async function handleLogout() {
@@ -175,16 +182,18 @@ export default function MyPage() {
         onClose={() => setLogoutOpen(false)}
         confirmLabel="네"
         cancelLabel="아니오"
+        actionsLayout="row"
+        primaryAction="cancel"
         onConfirm={handleLogout}
         onCancel={() => setLogoutOpen(false)}
       >
         <div className="flex flex-col items-center gap-3">
           <FigmaImage
-            src={figmaAssets.logo}
+            src={figmaAssets.sadBean}
             alt=""
-            width={48}
-            height={48}
-            className="h-12 w-12 object-contain"
+            width={72}
+            height={72}
+            className="h-[72px] w-[72px] object-contain"
           />
           <p>정말 로그아웃 하시겠어요?</p>
         </div>

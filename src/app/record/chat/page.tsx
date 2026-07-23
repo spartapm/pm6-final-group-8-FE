@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorModal } from '@/components/ui/ErrorModal';
 import { BackButton } from '@/components/ui/BackButton';
+import { FigmaImage } from '@/components/ui/FigmaImage';
 import { ChatBubble, ChatInputBar, ExtraQuestionBubble } from '@/components/record/ChatBubble';
-import { CATEGORY_LABELS } from '@/lib/constants/categories';
+import { CATEGORY_LABELS, getEmotionImage, getEmotionLabel } from '@/lib/constants/categories';
 import {
   getQuestions,
   getQuestionHints,
@@ -24,6 +25,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api-client';
 import { AnalyticsEvent, capture } from '@/lib/analytics';
+import { filterPersistMessages } from '@/lib/record-utils';
+import { invalidateRecordCaches } from '@/lib/screen-cache';
 import type { Record } from '@/types';
 
 type Phase = 'q1' | 'q2' | 'q3' | 'extra_ask' | 'extra_input' | 'save';
@@ -133,7 +136,7 @@ export default function ChatPage() {
       addMessage({ role: 'bot', content: questions[2], sortOrder: sortRef.current++ });
       showBotMessage(questions[2], questionHints[2], () => setPhase('q3'));
     } else if (phase === 'q3') {
-      addMessage({ role: 'bot', content: EXTRA_QUESTION, sortOrder: sortRef.current++ });
+      // UI에만 표시 — 완료/상세 Q&A에 남지 않도록 messages에는 넣지 않음
       showBotMessage(EXTRA_QUESTION, undefined, () => setPhase('extra_ask'));
     } else if (phase === 'extra_input') {
       setPhase('save');
@@ -148,7 +151,10 @@ export default function ChatPage() {
       { role: 'bot' as const, content: questions[0], sortOrder: 0 },
     ];
 
-    const hasUserText = allMessages.some((m) => m.role === 'user' && m.content.trim());
+    // 메타 질문·선택지 제거. 추가 작성 본문(EXTRA_INPUT_PROMPT + 답변)은 유지
+    const persistMessages = filterPersistMessages(allMessages);
+
+    const hasUserText = persistMessages.some((m) => m.role === 'user' && m.content.trim());
     if (!hasUserText && !forceEmpty) {
       setEmptyConfirm(true);
       return;
@@ -161,7 +167,7 @@ export default function ChatPage() {
         recordDate,
         category,
         emotionLevel,
-        messages: allMessages.map((m, i) => ({
+        messages: persistMessages.map((m, i) => ({
           role: m.role,
           content: m.content,
           sortOrder: m.sortOrder ?? i,
@@ -172,6 +178,7 @@ export default function ChatPage() {
         emotionLevel,
         status: record.status,
       });
+      invalidateRecordCaches();
       // reset은 완료 화면에서 수행 — 여기서 reset하면 category=null → /record/category로 튕김
       router.replace(`/record/complete?id=${record.id}`);
     } catch (e) {
@@ -186,6 +193,7 @@ export default function ChatPage() {
   const showInput = ['q1', 'q2', 'q3', 'extra_input'].includes(phase);
   const showSave = phase === 'save';
   const bottomPad = Math.max(keyboardOffset, 0);
+  const emotionLabel = getEmotionLabel(emotionLevel);
 
   return (
     <div className="flex min-h-dvh flex-col bg-white" style={{ paddingBottom: bottomPad }}>
@@ -201,7 +209,19 @@ export default function ChatPage() {
               {CATEGORY_LABELS[category]}
             </p>
           </div>
-          <div className="w-7" />
+          <div
+            className="flex h-7 w-7 shrink-0 items-center justify-center"
+            title={emotionLabel}
+            aria-label={`선택한 감정: ${emotionLabel}`}
+          >
+            <FigmaImage
+              src={getEmotionImage(emotionLevel)}
+              alt={emotionLabel}
+              width={29}
+              height={29}
+              className="h-[29px] w-[29px] object-contain"
+            />
+          </div>
         </div>
       </header>
 
@@ -225,18 +245,14 @@ export default function ChatPage() {
                   content={msg.content}
                   hint={msg.hint}
                   onSkip={() => {
-                    setPhase('save');
+                    void handleSave();
                   }}
                   onMore={() => {
+                    // UI에만 표시, 저장 messages에는 EXTRA_MORE_LABEL 미포함
                     setDisplayed((d) => [
                       ...d,
                       { role: 'user', content: EXTRA_MORE_LABEL },
                     ]);
-                    addMessage({
-                      role: 'user',
-                      content: EXTRA_MORE_LABEL,
-                      sortOrder: sortRef.current++,
-                    });
                     showBotMessage(EXTRA_INPUT_PROMPT, undefined, () => {
                       addMessage({
                         role: 'bot',
@@ -280,7 +296,12 @@ export default function ChatPage() {
 
         {showSave && (
           <div className="px-[22px] py-3">
-            <Button fullWidth loading={loading} className="h-12" onClick={() => handleSave()}>
+            <Button
+              fullWidth
+              loading={loading}
+              className="h-12 border-0 bg-[#564444] text-white shadow-[0px_4px_5.2px_rgba(0,0,0,0.3)] hover:bg-[#564444]/90"
+              onClick={() => handleSave()}
+            >
               저장하고 결과 보기
             </Button>
           </div>
@@ -291,9 +312,10 @@ export default function ChatPage() {
         open={emptyConfirm}
         onClose={() => setEmptyConfirm(false)}
         confirmLabel="저장하고 결과 보기"
+        closeOnConfirm={false}
         onConfirm={() => {
           setEmptyConfirm(false);
-          handleSave(true);
+          void handleSave(true);
         }}
       >
         {EMPTY_SAVE_MESSAGE}

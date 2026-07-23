@@ -15,11 +15,31 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api-client';
 import { AnalyticsEvent, capture } from '@/lib/analytics';
-import { COMPETENCY_CATEGORIES, CATEGORY_LABELS } from '@/lib/constants/categories';
+import { COMPETENCY_CATEGORIES } from '@/lib/constants/categories';
+import {
+  clearReportDetailState,
+  loadReportDetailState,
+  saveReportDetailState,
+} from '@/lib/nav-state';
+import { getReportSummaryCache, setReportSummaryCache } from '@/lib/screen-cache';
+import { ExperienceRecordCard } from '@/components/record/ExperienceRecordCard';
 import type { ReportSummary, Insight } from '@/types';
 import { cn } from '@/lib/utils';
 
 type Period = '1w' | '1m' | '3m' | 'custom';
+
+type DetailRecord = {
+  id: string;
+  summary: string | null;
+  record_date: string;
+  created_at?: string;
+  category: string;
+  status?: string;
+  tags?: Array<{
+    evidenceText?: string;
+    tag: { name: string; code?: string; category?: string } | null;
+  }>;
+};
 
 function getPresetDateRange(period: Exclude<Period, 'custom'>): { from: string; to: string } {
   const to = new Date();
@@ -53,8 +73,9 @@ export default function ReportPage() {
   const [customFrom, setCustomFrom] = useState<Date>(defaultCustom.from);
   const [customTo, setCustomTo] = useState<Date>(defaultCustom.to);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [periodBeforeCustom, setPeriodBeforeCustom] = useState<Period>('1w');
   const [summary, setSummary] = useState<ReportSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [insightOpen, setInsightOpen] = useState(false);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [periodDays, setPeriodDays] = useState(7);
@@ -62,20 +83,8 @@ export default function ReportPage() {
   const [error, setError] = useState<Error | null>(null);
   const [detailCategory, setDetailCategory] = useState<string | null>(null);
   const [detailLabel, setDetailLabel] = useState('');
-  const [detailRecords, setDetailRecords] = useState<
-    Array<{
-      id: string;
-      summary: string | null;
-      record_date: string;
-      created_at?: string;
-      category: string;
-      status?: string;
-      tags?: Array<{
-        evidenceText?: string;
-        tag: { name: string; code?: string; category?: string } | null;
-      }>;
-    }>
-  >([]);
+  const [detailRecords, setDetailRecords] = useState<DetailRecord[]>([]);
+  const [detailRestored, setDetailRestored] = useState(false);
 
   const dateRange = useMemo(() => {
     if (period === 'custom') {
@@ -98,17 +107,39 @@ export default function ReportPage() {
     if (!token) return;
 
     const { from, to } = dateRange;
-    setLoading(true);
+    const cached = getReportSummaryCache(from, to);
+    if (cached) {
+      setSummary(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     api
       .getReportSummary(token, from, to)
-      .then(setSummary)
+      .then((data) => {
+        setReportSummaryCache(from, to, data);
+        setSummary(data);
+      })
       .catch((e) => setError(e instanceof Error ? e : new Error('로드 실패')))
       .finally(() => setLoading(false));
   }, [authLoading, getToken, dateRange]);
 
+  useEffect(() => {
+    if (authLoading || detailRestored) return;
+    const saved = loadReportDetailState();
+    if (!saved) {
+      setDetailRestored(true);
+      return;
+    }
+    setDetailRestored(true);
+    void openDetail(saved.category, saved.label);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, detailRestored]);
+
   function handlePeriodSelect(p: Period) {
     if (p === 'custom') {
-      setPeriod('custom');
+      setPeriodBeforeCustom(period);
       setCalendarOpen(true);
     } else {
       setPeriod(p);
@@ -120,6 +151,16 @@ export default function ReportPage() {
     setCustomTo(to);
     setPeriod('custom');
     setCalendarOpen(false);
+  }
+
+  function handleDateRangeCancel() {
+    setCalendarOpen(false);
+    // 확정 전이면 이전 period 유지 (custom로 바꾸지 않음)
+    if (period === 'custom') {
+      // 이미 custom이었던 경우 유지
+      return;
+    }
+    setPeriod(periodBeforeCustom);
   }
 
   async function handleInsight() {
@@ -153,18 +194,7 @@ export default function ReportPage() {
     const token = getToken();
     if (!token) return;
     const { from, to } = dateRange;
-    const records = (await api.getCompetencyRecords(token, category, from, to)) as Array<{
-      id: string;
-      summary: string | null;
-      record_date: string;
-      created_at?: string;
-      category: string;
-      status?: string;
-      tags?: Array<{
-        evidenceText?: string;
-        tag: { name: string; code?: string; category?: string } | null;
-      }>;
-    }>;
+    const records = (await api.getCompetencyRecords(token, category, from, to)) as DetailRecord[];
     // 최신 날짜 순 → 같은 날짜면 최신 등록 순
     const sorted = [...records].sort((a, b) => {
       const byDate = b.record_date.localeCompare(a.record_date);
@@ -174,6 +204,12 @@ export default function ReportPage() {
     setDetailCategory(category);
     setDetailLabel(label);
     setDetailRecords(sorted);
+    saveReportDetailState({ category, label });
+  }
+
+  function closeDetail() {
+    setDetailCategory(null);
+    clearReportDetailState();
   }
 
   if (authLoading) return null;
@@ -188,19 +224,22 @@ export default function ReportPage() {
 
         <div className="mt-4 rounded-xl bg-white px-3 py-3 shadow-[0_4px_8.1px_rgba(0,0,0,0.2)]">
           <div className="flex flex-wrap items-center justify-center gap-2">
-            {(['1w', '1m', '3m', 'custom'] as Period[]).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => handlePeriodSelect(p)}
-                className={cn(
-                  'rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors',
-                  period === p ? 'bg-primary text-white' : 'bg-[#f1f1f1] text-olive',
-                )}
-              >
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
+            {(['1w', '1m', '3m', 'custom'] as Period[]).map((p) => {
+              const active = calendarOpen ? p === 'custom' : period === p;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => handlePeriodSelect(p)}
+                  className={cn(
+                    'rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors',
+                    active ? 'bg-primary text-white' : 'bg-[#f1f1f1] text-olive',
+                  )}
+                >
+                  {PERIOD_LABELS[p]}
+                </button>
+              );
+            })}
           </div>
 
           <div className="my-3 h-px bg-[#e8e8e8]" />
@@ -243,6 +282,7 @@ export default function ReportPage() {
                 const item = summary?.radar.find((r) => r.category === cat.id);
                 const count = item?.count ?? 0;
                 const barWidth = maxCompetencyCount > 0 ? (count / maxCompetencyCount) * 100 : 0;
+                const isTop = count > 0 && count === maxCompetencyCount;
 
                 return (
                   <button
@@ -252,14 +292,30 @@ export default function ReportPage() {
                     className="w-full text-left"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[15px] font-bold text-foreground">{cat.label}</span>
-                      <span className="text-[12px] text-olive">
-                        {count}개 기록에서 발견 <span className="text-[#c4bdb3]">›</span>
+                      <span
+                        className={cn(
+                          'text-[15px] font-bold',
+                          isTop ? 'text-primary' : 'text-foreground',
+                        )}
+                      >
+                        {cat.label}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-[12px]',
+                          isTop ? 'font-bold text-primary' : 'text-olive',
+                        )}
+                      >
+                        {count}개 기록에서 발견{' '}
+                        <span className={isTop ? 'text-primary' : 'text-[#c4bdb3]'}>›</span>
                       </span>
                     </div>
                     <div className="mt-2 h-[5px] w-full overflow-hidden rounded-full bg-[#f1f1f1]">
                       <div
-                        className="h-full rounded-full bg-primary transition-all"
+                        className={cn(
+                          'h-full rounded-full transition-all',
+                          isTop ? 'bg-primary' : 'bg-[#F5B4B4]',
+                        )}
                         style={{ width: `${barWidth}%` }}
                       />
                     </div>
@@ -290,7 +346,7 @@ export default function ReportPage() {
         from={customFrom}
         to={customTo}
         onConfirm={handleDateRangeConfirm}
-        onCancel={() => setCalendarOpen(false)}
+        onCancel={handleDateRangeCancel}
       />
 
       <InsightModal
@@ -302,7 +358,7 @@ export default function ReportPage() {
 
       {detailCategory && (
         <MobileOverlay className="min-h-dvh bg-white">
-          <ScreenHeader title="분석 기록" onBack={() => setDetailCategory(null)} />
+          <ScreenHeader title="분석 기록" onBack={closeDetail} />
           <div className="flex-1 overflow-y-auto px-3.5 py-4 pb-24">
             <h2 className="text-[20px] font-bold leading-[28px] text-foreground">
               &ldquo;{detailLabel}&rdquo;은
@@ -319,58 +375,19 @@ export default function ReportPage() {
               </p>
             ) : (
               <div className="mt-6 space-y-3">
-                {detailRecords.map((r) => {
-                  // 현재 보고 있는 역량 대분류 태그를 우선, 기록당 최대 2개
-                  const matched = (r.tags ?? []).filter(
-                    (t) => t.tag?.name && (!detailCategory || t.tag.category === detailCategory),
-                  );
-                  const fallback = (r.tags ?? []).filter((t) => t.tag?.name);
-                  const tagNames = (matched.length > 0 ? matched : fallback)
-                    .map((t) => t.tag!.name)
-                    .slice(0, 2);
-
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      className="w-full rounded-[14px] bg-[#f1f1f1] px-3.5 py-3.5 text-left"
-                      onClick={() => router.push(`/records/${r.id}?from=report`)}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex min-h-[15px] flex-wrap gap-x-2 gap-y-1">
-                          {tagNames.map((name) => (
-                            <span
-                              key={name}
-                              className="text-[11px] font-bold leading-[15px] text-primary"
-                            >
-                              #{name}
-                            </span>
-                          ))}
-                        </div>
-                        <span className="shrink-0 text-[12px] font-medium leading-[15px] text-primary">
-                          분석 완료
-                        </span>
-                      </div>
-
-                      <p className="mt-2 text-[16px] font-black leading-[22px] text-foreground">
-                        {CATEGORY_LABELS[r.category] ?? r.category}
-                      </p>
-                      <p className="mt-1 text-[12px] font-medium leading-[15px] text-olive">
-                        {r.record_date}
-                      </p>
-                      <p className="mt-2 whitespace-pre-wrap text-[14px] font-medium leading-[21px] text-[#5e574a]">
-                        {r.summary?.trim()
-                          ? `“${r.summary.trim()}”`
-                          : '“기록이 저장되었습니다.”'}
-                      </p>
-                    </button>
-                  );
-                })}
+                {detailRecords.map((r) => (
+                  <ExperienceRecordCard
+                    key={r.id}
+                    record={r}
+                    preferTagCategory={detailCategory}
+                    onClick={() => router.push(`/records/${r.id}?from=report`)}
+                  />
+                ))}
               </div>
             )}
           </div>
           <div className="shrink-0 px-3.5 py-4">
-            <Button fullWidth onClick={() => setDetailCategory(null)}>
+            <Button fullWidth onClick={closeDetail}>
               확인했어요
             </Button>
           </div>

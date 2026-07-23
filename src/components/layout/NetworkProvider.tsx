@@ -72,6 +72,8 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         open={open}
         onClose={() => !retrying && setOpen(false)}
         confirmLabel={retrying ? '재시도 중...' : '확인했어요'}
+        closeOnConfirm={false}
+        confirmLoading={retrying}
         onConfirm={retrying ? undefined : runRetry}
       >
         연결이 원활하지 않아요.
