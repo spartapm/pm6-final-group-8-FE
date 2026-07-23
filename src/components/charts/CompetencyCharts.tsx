@@ -38,7 +38,7 @@ export function CompetencyRadarChart({ data }: RadarChartProps) {
               const { x, y, payload, textAnchor } = props as {
                 x: number;
                 y: number;
-                textAnchor?: string;
+                textAnchor?: 'start' | 'middle' | 'end' | 'inherit';
                 payload: { value: string };
               };
               const isTop = topLabels.has(payload.value);
