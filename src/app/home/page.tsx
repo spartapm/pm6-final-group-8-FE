@@ -293,13 +293,16 @@ export default function HomePage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-7 gap-0 text-center text-[9px] font-bold text-olive">
-              {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
-                <span key={d} className={cn('py-1', d === '일' && 'text-primary')}>
-                  {d}
-                </span>
-              ))}
-            </div>
+            {/* 월간: 요일 헤더 고정 / 주간(접기): 요일을 날짜 셀 안에 넣어 세로 타원 강조 */}
+            {!expanded && (
+              <div className="grid grid-cols-7 gap-0 text-center text-[9px] font-bold text-olive">
+                {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
+                  <span key={d} className={cn('py-1', d === '일' && 'text-primary')}>
+                    {d}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <div className="grid grid-cols-7 gap-0">
               {displayDays.map((day) => {
@@ -309,6 +312,13 @@ export default function HomePage() {
                 const isFuture = isAfter(day, today) && !isSameDay(day, today);
                 const hasRecord = markedDates.has(dateStr);
                 const inMonth = isSameMonth(day, viewMonth);
+                const weekday = ['일', '월', '화', '수', '목', '금', '토'][day.getDay()];
+                const dayColor = cn(
+                  // 오늘만 키컬러, 선택일은 하이라이트만 (글자색 유지)
+                  !inMonth && !expanded && 'text-[#d1cbcb]',
+                  (inMonth || expanded) && isToday && 'text-primary',
+                  (inMonth || expanded) && !isToday && 'text-foreground',
+                );
 
                 return (
                   <button
@@ -321,34 +331,62 @@ export default function HomePage() {
                       if (!isFuture) handleSelectDate(day);
                     }}
                     className={cn(
-                      'relative flex h-11 items-center justify-center',
+                      'relative flex items-center justify-center',
+                      expanded ? 'h-[62px]' : 'h-11',
                       isFuture && 'opacity-30',
                     )}
                   >
+                    {/* 주간(접기): 요일+날짜를 감싸는 세로 타원 */}
+                    {expanded && isSelected && (
+                      <span
+                        className="absolute left-1/2 top-1/2 h-[56px] w-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f8d9da]"
+                        aria-hidden
+                      />
+                    )}
+
                     <span
                       className={cn(
-                        'relative flex h-9 w-9 items-center justify-center text-[14px] font-bold',
-                        // 오늘만 키컬러, 선택일은 원 하이라이트만 (글자색 유지)
-                        !inMonth && !expanded && 'text-[#d1cbcb]',
-                        (inMonth || expanded) && isToday && 'text-primary',
-                        (inMonth || expanded) && !isToday && 'text-foreground',
+                        'relative z-10 flex flex-col items-center',
+                        expanded ? 'gap-0.5' : '',
                       )}
                     >
-                      {isSelected && (
+                      {expanded && (
                         <span
-                          className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 translate-y-[calc(-50%+3px)] rounded-full bg-[#f8d9da]"
-                          aria-hidden
-                        />
+                          className={cn(
+                            'text-[9px] font-bold text-olive',
+                            (weekday === '일' || isToday) && 'text-primary',
+                          )}
+                        >
+                          {weekday}
+                        </span>
                       )}
-                      <span className="relative z-10">{format(day, 'd')}</span>
+                      <span
+                        className={cn(
+                          'relative flex h-9 w-9 items-center justify-center text-[14px] font-bold',
+                          dayColor,
+                        )}
+                      >
+                        {/* 월간: 날짜만 원형 하이라이트 */}
+                        {!expanded && isSelected && (
+                          <span
+                            className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f8d9da]"
+                            aria-hidden
+                          />
+                        )}
+                        <span className="relative z-10">{format(day, 'd')}</span>
+                      </span>
                     </span>
+
                     {hasRecord && (
                       <FigmaImage
                         src={figmaAssets.calendarDot}
                         alt=""
                         width={6}
                         height={6}
-                        className="absolute bottom-1 left-1/2 -translate-x-1/2"
+                        className={cn(
+                          'absolute left-1/2 z-10 -translate-x-1/2',
+                          expanded ? 'bottom-1.5' : 'bottom-1',
+                        )}
                       />
                     )}
                   </button>
