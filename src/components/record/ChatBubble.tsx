@@ -134,7 +134,7 @@ export function ChatInputBar({
   onSend,
   disabled,
   sendDisabled,
-  placeholder = '자세히 작성할수록 분석에 도움이 됩니다.',
+  placeholder = '한 줄도 좋지만 자세히 쓰면 분석이 더 잘돼요.',
 }: ChatInputBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const shouldRefocusRef = useRef(false);
